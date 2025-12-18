@@ -1,0 +1,5 @@
+{
+  "name": "FaithConnect",
+  "description": "A production-ready, secure, multi-tenant church management web application with role-based access control, streaming portals, and administrative dashboards.",
+  "requestFramePermissions": []
+}
