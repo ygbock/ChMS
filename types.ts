@@ -71,12 +71,14 @@ export interface MemberTransfer {
   requested_by: string;
   status: 'pending' | 'approved' | 'rejected';
   notes?: string;
+  rejection_notes?: string;
   processed_by?: string;
   created_at: string;
   // Joins
   church_branches_to?: Branch;
   church_branches_from?: Branch;
   profiles?: Profile;
+  processed_by_profile?: Profile; // Joined data
 }
 
 export interface Notification {
@@ -94,4 +96,14 @@ export interface DashboardStats {
   weeklyAttendance: number;
   monthlyGiving: number;
   activeGroups: number;
+}
+
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  action: string;
+  details: any;
+  created_at: string;
+  // Joins
+  profiles?: Profile;
 }

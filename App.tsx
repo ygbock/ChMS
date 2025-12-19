@@ -14,7 +14,11 @@ import { TransferHistory } from './pages/portal/TransferHistory';
 // Admin Pages
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminTransferQueue } from './pages/admin/TransferQueue';
+import { AdminMembers } from './pages/admin/Members';
 import { StreamingControl } from './pages/admin/StreamingControl';
+
+// Super Admin Pages
+import { AuditLogs } from './pages/superadmin/AuditLog';
 
 const App: React.FC = () => {
   return (
@@ -40,9 +44,15 @@ const App: React.FC = () => {
             <Route index element={<AdminDashboard />} />
             <Route path="streaming" element={<StreamingControl />} />
             <Route path="transfers" element={<div className="p-8"><AdminTransferQueue /></div>} />
-            <Route path="members" element={<div className="p-8">Members Management Placeholder</div>} />
+            <Route path="members" element={<div className="p-8"><AdminMembers /></div>} />
             <Route path="finance" element={<div className="p-8">Finance Placeholder</div>} />
             <Route path="settings" element={<div className="p-8">Branch Settings Placeholder</div>} />
+          </Route>
+
+          {/* Super Admin Routes */}
+          <Route path="/superadmin" element={<ProtectedRoute role="admin" />}>
+             <Route index element={<div className="p-8">Super Admin Overview</div>} />
+             <Route path="audit-logs" element={<div className="p-8"><AuditLogs /></div>} />
           </Route>
 
           {/* Fallback */}

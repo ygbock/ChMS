@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { MemberTransfer } from '../../types';
 import { Card, Badge, Spinner, Button } from '../../components/ui';
-import { Check, X, Search, RefreshCw } from 'lucide-react';
+import { Check, X, Search, RefreshCw, AlertCircle } from 'lucide-react';
 
 export const AdminTransferQueue: React.FC = () => {
   const { profile } = useAuth();
@@ -16,12 +16,14 @@ export const AdminTransferQueue: React.FC = () => {
     setLoading(true);
     try {
       // Fetch requests where the target is the current admin's branch
+      // Join processed_by with profiles to get the name
       const { data, error } = await supabase
         .from('member_transfers')
         .select(`
           *,
           profiles:member_id(full_name, email, avatar_url),
-          church_branches_from:from_branch_id(name)
+          church_branches_from:from_branch_id(name),
+          processed_by_profile:processed_by(full_name)
         `)
         .eq('to_branch_id', profile.branch_id)
         .order('created_at', { ascending: false });
@@ -47,6 +49,14 @@ export const AdminTransferQueue: React.FC = () => {
       if (action === 'approve') {
         const { error } = await supabase.rpc('approve_member_transfer', { transfer_id: id });
         if (error) throw error;
+        
+        // Audit Log (Mock)
+        await supabase.from('audit_logs').insert({
+          user_id: profile?.id,
+          action: 'approve_transfer',
+          details: { transfer_id: id }
+        });
+
       } else {
         const notes = prompt("Enter rejection reason (optional):") || "No reason provided";
         const { error } = await supabase.rpc('reject_member_transfer', { 
@@ -54,6 +64,13 @@ export const AdminTransferQueue: React.FC = () => {
             rejection_notes: notes 
         });
         if (error) throw error;
+
+        // Audit Log (Mock)
+        await supabase.from('audit_logs').insert({
+          user_id: profile?.id,
+          action: 'reject_transfer',
+          details: { transfer_id: id, reason: notes }
+        });
       }
       // Refresh list
       await fetchRequests();
@@ -133,6 +150,7 @@ export const AdminTransferQueue: React.FC = () => {
                         <th className="px-4 py-2">From</th>
                         <th className="px-4 py-2">Status</th>
                         <th className="px-4 py-2">Processed By</th>
+                        <th className="px-4 py-2">Notes</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -145,11 +163,20 @@ export const AdminTransferQueue: React.FC = () => {
                                 {req.status === 'approved' && <Badge variant="success">Approved</Badge>}
                                 {req.status === 'rejected' && <Badge variant="error">Rejected</Badge>}
                             </td>
-                            <td className="px-4 py-3 text-gray-400 text-xs truncate max-w-[150px]">{req.processed_by || '-'}</td>
+                            <td className="px-4 py-3 text-gray-800 font-medium text-xs">
+                              {req.processed_by_profile?.full_name || 'System'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                                {req.status === 'rejected' && req.rejection_notes ? (
+                                    <span className="flex items-center gap-1 text-red-600" title={req.rejection_notes}>
+                                        <AlertCircle size={12} /> {req.rejection_notes}
+                                    </span>
+                                ) : '-'}
+                            </td>
                         </tr>
                     ))}
                     {historyRequests.length === 0 && (
-                        <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No history available</td></tr>
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No history available</td></tr>
                     )}
                 </tbody>
             </table>

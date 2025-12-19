@@ -14,7 +14,8 @@ import {
   Building,
   ShieldCheck,
   ArrowRightLeft,
-  History
+  History,
+  FileText
 } from 'lucide-react';
 import { Spinner, Button } from './ui';
 
@@ -110,10 +111,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
               </p>
               <Link
                 to="/superadmin"
-                className="flex items-center gap-3 px-3 py-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mb-1"
               >
                 <ShieldCheck size={20} />
                 Global View
+              </Link>
+              <Link
+                to="/superadmin/audit-logs"
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <FileText size={20} />
+                Audit Logs
               </Link>
             </div>
           )}
