@@ -27,10 +27,12 @@ export const TransferRequestForm: React.FC = () => {
           .neq('id', profile.branch_id || '')
           .order('name');
         
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
         setBranches(data || []);
-      } catch (err) {
-        console.error("Error loading branches", err);
+      } catch (err: any) {
+        console.error("Error loading branches:", err.message || err);
       } finally {
         setFetching(false);
       }

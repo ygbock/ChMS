@@ -10,6 +10,18 @@ import { TransferRequestForm } from './components/TransferRequestForm';
 import { PortalDashboard } from './pages/portal/Dashboard';
 import { PortalStreaming } from './pages/portal/Streaming';
 import { TransferHistory } from './pages/portal/TransferHistory';
+import { 
+  PortalDirectory, 
+  PortalRegistrations, 
+  PortalAttendance, 
+  PortalGroups, 
+  PortalNotifications, 
+  PortalSettings, 
+  PortalShare, 
+  PortalDepartments,
+  PortalProfile,
+  PortalCalendar
+} from './pages/portal/Placeholders';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/Dashboard';
@@ -32,11 +44,23 @@ const App: React.FC = () => {
           {/* Member Portal Routes (Protected) */}
           <Route path="/portal" element={<ProtectedRoute role="any" />}>
             <Route index element={<PortalDashboard />} />
+            <Route path="profile" element={<PortalProfile />} />
+            <Route path="directory" element={<PortalDirectory />} />
+            <Route path="registrations" element={<PortalRegistrations />} />
+            <Route path="attendance" element={<PortalAttendance />} />
+            <Route path="groups" element={<PortalGroups />} />
+            <Route path="calendar" element={<PortalCalendar />} />
+            <Route path="notifications" element={<PortalNotifications />} />
+            <Route path="settings" element={<PortalSettings />} />
+            <Route path="share" element={<PortalShare />} />
+            <Route path="departments" element={<PortalDepartments />} />
             <Route path="streaming" element={<PortalStreaming />} />
-            <Route path="profile" element={<div className="p-8">Profile Page Placeholder</div>} />
-            <Route path="calendar" element={<div className="p-8">Calendar Page Placeholder</div>} />
+            <Route path="streaming/:streamId" element={<PortalStreaming />} />
+            
+            {/* Existing functionality retained */}
             <Route path="transfer-request" element={<div className="p-8 max-w-2xl"><TransferRequestForm /></div>} />
             <Route path="transfers" element={<div className="p-8"><TransferHistory /></div>} />
+            <Route path="giving" element={<div className="p-8">Giving Placeholder</div>} />
           </Route>
 
           {/* Branch Admin Routes (Protected + Role Check) */}

@@ -15,7 +15,13 @@ import {
   ShieldCheck,
   ArrowRightLeft,
   History,
-  FileText
+  FileText,
+  BookUser,
+  ClipboardList,
+  CheckSquare,
+  Bell,
+  Share2,
+  Network
 } from 'lucide-react';
 import { Spinner, Button } from './ui';
 
@@ -40,12 +46,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
 
   const portalLinks = [
     { name: 'Dashboard', path: '/portal', icon: LayoutDashboard },
-    { name: 'My Profile', path: '/portal/profile', icon: Users },
     { name: 'Live Stream', path: '/portal/streaming', icon: Video },
-    { name: 'Events', path: '/portal/calendar', icon: Calendar },
-    { name: 'Give', path: '/portal/giving', icon: CreditCard },
-    { name: 'Request Transfer', path: '/portal/transfer-request', icon: ArrowRightLeft },
-    { name: 'My Transfers', path: '/portal/transfers', icon: History },
+    { name: 'Calendar', path: '/portal/calendar', icon: Calendar },
+    { name: 'Groups', path: '/portal/groups', icon: Users },
+    { name: 'Directory', path: '/portal/directory', icon: BookUser },
+    { name: 'Departments', path: '/portal/departments', icon: Network },
+    { name: 'Attendance', path: '/portal/attendance', icon: CheckSquare },
+    { name: 'Registrations', path: '/portal/registrations', icon: ClipboardList },
+    { name: 'Notifications', path: '/portal/notifications', icon: Bell },
+    { name: 'Transfers', path: '/portal/transfers', icon: ArrowRightLeft },
+    { name: 'Share', path: '/portal/share', icon: Share2 },
+    { name: 'Settings', path: '/portal/settings', icon: Settings },
   ];
 
   const links = isAdmin ? adminLinks : portalLinks;
@@ -72,7 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
         </div>
 
         <div className="p-4 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+          <Link to={isAdmin ? "/admin/settings" : "/portal/profile"} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold">
               {profile?.email?.[0].toUpperCase()}
             </div>
@@ -80,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
               <p className="truncate text-sm font-medium">{profile?.email}</p>
               <p className="text-xs text-slate-400 capitalize">{profile?.primary_role}</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

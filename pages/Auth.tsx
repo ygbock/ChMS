@@ -26,13 +26,18 @@ export const Auth: React.FC = () => {
         if (error) throw error;
         navigate('/portal');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-        // In real app, show "Check your email" message
-        alert('Check your email for the confirmation link!');
+        
+        if (data.session) {
+          navigate('/portal');
+        } else {
+          // In real app, show "Check your email" message
+          alert('Check your email for the confirmation link!');
+        }
       }
     } catch (err: any) {
       setError(err.message);

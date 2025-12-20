@@ -3,8 +3,10 @@ import { Card, Button, Input } from '../../components/ui';
 import { Video, Send, User } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Stream, StreamStatus } from '../../types';
+import { useParams } from 'react-router-dom';
 
 export const PortalStreaming: React.FC = () => {
+  const { streamId } = useParams<{ streamId: string }>();
   const [activeStream, setActiveStream] = useState<Stream | null>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,11 +16,15 @@ export const PortalStreaming: React.FC = () => {
     const fetchStream = async () => {
       // In real app, query supabase
       // const { data } = await supabase.from('streams').select('*').eq('status', 'live').single();
+      // If streamId is provided, fetch that specific stream
+      
+      console.log("Fetching stream...", streamId ? `ID: ${streamId}` : "Default live stream");
+
       // Mock:
       setActiveStream({
-        id: '1',
-        title: 'Sunday Service Live',
-        status: StreamStatus.LIVE,
+        id: streamId || '1',
+        title: streamId ? `Archived Stream #${streamId}` : 'Sunday Service Live',
+        status: streamId ? StreamStatus.ARCHIVED : StreamStatus.LIVE,
         platform: 'custom',
         privacy: 'public' as any,
         description: 'Join us for our weekly Sunday worship service.',
@@ -26,7 +32,7 @@ export const PortalStreaming: React.FC = () => {
       } as Stream);
     };
     fetchStream();
-  }, []);
+  }, [streamId]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
