@@ -74,9 +74,9 @@ const App: React.FC = () => {
           </Route>
 
           {/* Super Admin Routes */}
-          <Route path="/superadmin" element={<ProtectedRoute role="admin" />}>
-             <Route index element={<div className="p-8">Super Admin Overview</div>} />
-             <Route path="audit-logs" element={<div className="p-8"><AuditLogs /></div>} />
+          <Route path="/superadmin" element={<ProtectedRoute role="superadmin" />}>
+            <Route index element={<div className="p-8">Super Admin Overview</div>} />
+            <Route path="audit-logs" element={<div className="p-8"><AuditLogs /></div>} />
           </Route>
 
           {/* Fallback */}

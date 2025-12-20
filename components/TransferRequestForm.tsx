@@ -19,17 +19,14 @@ export const TransferRequestForm: React.FC = () => {
   useEffect(() => {
     const loadBranches = async () => {
       if (!profile) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('church_branches')
           .select('*')
           .neq('id', profile.branch_id || '')
           .order('name');
-        
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
         setBranches(data || []);
       } catch (err: any) {
         console.error("Error loading branches:", err.message || err);
@@ -37,7 +34,7 @@ export const TransferRequestForm: React.FC = () => {
         setFetching(false);
       }
     };
-    
+
     if (profile) loadBranches();
     else if (profile === null) setFetching(false);
   }, [profile]);
@@ -45,28 +42,36 @@ export const TransferRequestForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !targetBranchId) return;
-    
+
     setLoading(true);
     setStatus('idle');
     setErrorMessage('');
 
     try {
-        const { error } = await supabase.rpc('submit_transfer_request', {
-            target_branch_id: targetBranchId,
-            notes: notes
-        });
+      // Simple client-side validation
+      if (targetBranchId === profile.branch_id) {
+        throw new Error("You are already in this branch.");
+      }
 
-        if (error) throw error;
-        
-        setStatus('success');
-        setTargetBranchId('');
-        setNotes('');
+      const { error } = await supabase.rpc('submit_transfer_request', {
+        target_branch_id: targetBranchId,
+        notes: notes
+      });
+
+      if (error) throw error;
+
+      setStatus('success');
+      setTargetBranchId('');
+      setNotes('');
+
+      // Redirect after a short delay for better UX
+      // setTimeout(() => navigate('/portal/transfers'), 3000);
     } catch (err: any) {
-        console.error("Transfer request error:", err);
-        setStatus('error');
-        setErrorMessage(err.message || 'Failed to submit transfer request.');
+      console.error("Transfer request error:", err);
+      setStatus('error');
+      setErrorMessage(err.message || 'Failed to submit transfer request.');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -117,10 +122,10 @@ export const TransferRequestForm: React.FC = () => {
               <div className="text-sm text-red-700">{errorMessage}</div>
             </div>
           )}
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Target Branch</label>
-            <select 
+            <select
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
               value={targetBranchId}
               onChange={(e) => setTargetBranchId(e.target.value)}
@@ -134,23 +139,23 @@ export const TransferRequestForm: React.FC = () => {
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-             <textarea 
-               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
-               value={notes}
-               onChange={(e) => setNotes(e.target.value)}
-               placeholder="Reason for transfer, expected moving date, etc."
-             />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+            <textarea
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Reason for transfer, expected moving date, etc."
+            />
           </div>
 
           <div className="flex justify-end">
-              <Button type="submit" disabled={loading || !targetBranchId} className="w-full sm:w-auto">
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <Spinner /> Submitting...
-                    </span>
-                  ) : 'Submit Transfer Request'}
-              </Button>
+            <Button type="submit" disabled={loading || !targetBranchId} className="w-full sm:w-auto">
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Spinner /> Submitting...
+                </span>
+              ) : 'Submit Transfer Request'}
+            </Button>
           </div>
         </form>
       </Card>

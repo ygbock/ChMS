@@ -43,13 +43,13 @@ export const AdminTransferQueue: React.FC = () => {
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     if (!confirm(`Are you sure you want to ${action} this request?`)) return;
-    
+
     setProcessingId(id);
     try {
       if (action === 'approve') {
         const { error } = await supabase.rpc('approve_member_transfer', { transfer_id: id });
         if (error) throw error;
-        
+
         // Audit Log (Mock)
         await supabase.from('audit_logs').insert({
           user_id: profile?.id,
@@ -59,9 +59,9 @@ export const AdminTransferQueue: React.FC = () => {
 
       } else {
         const notes = prompt("Enter rejection reason (optional):") || "No reason provided";
-        const { error } = await supabase.rpc('reject_member_transfer', { 
-            transfer_id: id, 
-            rejection_notes: notes 
+        const { error } = await supabase.rpc('reject_member_transfer', {
+          transfer_id: id,
+          rejection_notes: notes
         });
         if (error) throw error;
 
@@ -88,98 +88,100 @@ export const AdminTransferQueue: React.FC = () => {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-           <h1 className="text-2xl font-bold text-gray-900">Transfer Requests</h1>
-           <p className="text-gray-500">Manage incoming member transfers to your branch.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Transfer Requests</h1>
+          <p className="text-gray-500">Manage incoming member transfers to your branch.</p>
         </div>
         <Button variant="secondary" onClick={fetchRequests} className="gap-2">
-            <RefreshCw size={16} /> Refresh
+          <RefreshCw size={16} /> Refresh
         </Button>
       </div>
 
       <Card title={`Pending Requests (${pendingRequests.length})`}>
         {pendingRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No pending requests.</div>
+          <div className="text-center py-8 text-gray-500">No pending requests.</div>
         ) : (
-            <div className="space-y-4">
-                {pendingRequests.map(req => (
-                    <div key={req.id} className="border rounded-lg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-yellow-50/50 border-yellow-100">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                                {req.profiles?.full_name?.[0] || req.profiles?.email[0]}
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-900">{req.profiles?.full_name || req.profiles?.email}</h4>
-                                <p className="text-sm text-gray-500">
-                                    From: <span className="font-medium">{(req.church_branches_from as any)?.name}</span>
-                                </p>
-                                {req.notes && <p className="text-sm text-gray-600 mt-1 italic">"{req.notes}"</p>}
-                            </div>
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <Button 
-                                className="flex-1 md:flex-none gap-2" 
-                                size="sm" 
-                                onClick={() => handleAction(req.id, 'approve')}
-                                disabled={!!processingId}
-                            >
-                                <Check size={16} /> Approve
-                            </Button>
-                            <Button 
-                                variant="danger" 
-                                className="flex-1 md:flex-none gap-2" 
-                                size="sm" 
-                                onClick={() => handleAction(req.id, 'reject')}
-                                disabled={!!processingId}
-                            >
-                                <X size={16} /> Reject
-                            </Button>
-                        </div>
-                    </div>
-                ))}
-            </div>
+          <div className="space-y-4">
+            {pendingRequests.map(req => (
+              <div key={req.id} className="border rounded-lg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-yellow-50/50 border-yellow-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                    {req.profiles?.full_name?.[0] || req.profiles?.email[0]}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{req.profiles?.full_name || req.profiles?.email}</h4>
+                    <p className="text-sm text-gray-500">
+                      From: <span className="font-medium">{(req.church_branches_from as any)?.name}</span>
+                    </p>
+                    {req.notes && <p className="text-sm text-gray-600 mt-1 italic">"{req.notes}"</p>}
+                  </div>
+                </div>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <Button
+                    className="flex-1 md:flex-none gap-2"
+                    size="sm"
+                    onClick={() => handleAction(req.id, 'approve')}
+                    disabled={!!processingId}
+                  >
+                    <Check size={16} /> Approve
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="flex-1 md:flex-none gap-2"
+                    size="sm"
+                    onClick={() => handleAction(req.id, 'reject')}
+                    disabled={!!processingId}
+                  >
+                    <X size={16} /> Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </Card>
 
       <Card title="History">
         <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-                <thead className="text-gray-500 border-b">
-                    <tr>
-                        <th className="px-4 py-2">Date</th>
-                        <th className="px-4 py-2">Member</th>
-                        <th className="px-4 py-2">From</th>
-                        <th className="px-4 py-2">Status</th>
-                        <th className="px-4 py-2">Processed By</th>
-                        <th className="px-4 py-2">Notes</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {historyRequests.map(req => (
-                        <tr key={req.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3">{new Date(req.created_at).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 font-medium">{req.profiles?.full_name || req.profiles?.email}</td>
-                            <td className="px-4 py-3 text-gray-500">{(req.church_branches_from as any)?.name}</td>
-                            <td className="px-4 py-3">
-                                {req.status === 'approved' && <Badge variant="success">Approved</Badge>}
-                                {req.status === 'rejected' && <Badge variant="error">Rejected</Badge>}
-                            </td>
-                            <td className="px-4 py-3 text-gray-800 font-medium text-xs">
-                              {req.processed_by_profile?.full_name || 'System'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                                {req.status === 'rejected' && req.rejection_notes ? (
-                                    <span className="flex items-center gap-1 text-red-600" title={req.rejection_notes}>
-                                        <AlertCircle size={12} /> {req.rejection_notes}
-                                    </span>
-                                ) : '-'}
-                            </td>
-                        </tr>
-                    ))}
-                    {historyRequests.length === 0 && (
-                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No history available</td></tr>
-                    )}
-                </tbody>
-            </table>
+          <table className="w-full text-sm text-left">
+            <thead className="text-gray-500 border-b">
+              <tr>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Member</th>
+                <th className="px-4 py-2">From</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Processed By</th>
+                <th className="px-4 py-2">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {historyRequests.map(req => (
+                <tr key={req.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">{new Date(req.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 font-medium">{req.profiles?.full_name || req.profiles?.email}</td>
+                  <td className="px-4 py-3 text-gray-500">{(req.church_branches_from as any)?.name}</td>
+                  <td className="px-4 py-3">
+                    {req.status === 'approved' && <Badge variant="success">Approved</Badge>}
+                    {req.status === 'rejected' && <Badge variant="error">Rejected</Badge>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-800 font-medium text-xs">
+                    {req.processed_by_profile?.full_name || 'System'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {req.status === 'rejected' && req.rejection_notes ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="flex items-center gap-1 text-red-600" title={req.rejection_notes}>
+                          <AlertCircle size={12} /> Rejected: {req.rejection_notes}
+                        </span>
+                      </div>
+                    ) : req.notes || '-'}
+                  </td>
+                </tr>
+              ))}
+              {historyRequests.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No history available</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>

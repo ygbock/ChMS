@@ -8,13 +8,13 @@ export const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(!searchParams.get('mode'));
-  
+
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.MEMBER);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,9 +63,9 @@ export const Auth: React.FC = () => {
             }
           }
         });
-        
+
         if (error) throw error;
-        
+
         if (data.session) {
           // Auto login after signup
           navigate('/portal');
@@ -149,8 +149,8 @@ export const Auth: React.FC = () => {
             </div>
           )}
 
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             disabled={loading}
           >
             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
