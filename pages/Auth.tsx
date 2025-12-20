@@ -2,13 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Button, Input, Card } from '../components/ui';
+import { AppRole } from '../types';
 
 export const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(!searchParams.get('mode'));
+  
+  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [selectedRole, setSelectedRole] = useState<AppRole>(AppRole.MEMBER);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,23 +25,51 @@ export const Auth: React.FC = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        // --- LOGIN LOGIC ---
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        navigate('/portal');
+        if (authError) throw authError;
+
+        // Fetch profile to determine redirect
+        if (authData.session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('primary_role')
+            .eq('id', authData.session.user.id)
+            .single();
+
+          const role = profile?.primary_role;
+
+          // Intelligent Redirect based on Role
+          if (role === AppRole.SUPER_ADMIN) {
+            navigate('/superadmin');
+          } else if (role === AppRole.ADMIN || role === AppRole.DISTRICT_ADMIN) {
+            navigate('/admin');
+          } else {
+            navigate('/portal');
+          }
+        }
       } else {
+        // --- SIGNUP LOGIC ---
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+              primary_role: selectedRole, // Pass role to Supabase Auth Metadata
+            }
+          }
         });
+        
         if (error) throw error;
         
         if (data.session) {
+          // Auto login after signup
           navigate('/portal');
         } else {
-          // In real app, show "Check your email" message
           alert('Check your email for the confirmation link!');
         }
       }
@@ -59,6 +93,17 @@ export const Auth: React.FC = () => {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
+          {!isLogin && (
+            <Input
+              label="Full Name"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              placeholder="John Doe"
+            />
+          )}
+
           <Input
             label="Email"
             type="email"
@@ -76,8 +121,30 @@ export const Auth: React.FC = () => {
             placeholder="••••••••"
           />
 
+          {/* Role Selection - Only for Signup Demo Purposes */}
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Select Role (Demo Only)
+              </label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as AppRole)}
+              >
+                <option value={AppRole.MEMBER}>Member</option>
+                <option value={AppRole.WORKER}>Volunteer / Worker</option>
+                <option value={AppRole.ADMIN}>Branch Admin</option>
+                <option value={AppRole.SUPER_ADMIN}>Super Admin</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                * In production, roles are assigned by administrators.
+              </p>
+            </div>
+          )}
+
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
               {error}
             </div>
           )}
@@ -86,7 +153,7 @@ export const Auth: React.FC = () => {
             className="w-full" 
             disabled={loading}
           >
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
+            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
           </Button>
         </form>
 
