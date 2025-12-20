@@ -123,7 +123,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger on_auth_user_created
+create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
@@ -137,3 +137,45 @@ alter table public.attendance enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.notifications enable row level security;
 alter table public.member_transfers enable row level security;
+
+-- POLICIES
+
+-- Church Branches: Everyone can view
+create or replace policy "Branches are viewable by everyone" on public.church_branches for select using (true);
+
+-- Profiles: Users can view/edit their own, Admins can view all
+create or replace policy "Users can view own profile" on public.profiles for select using (auth.uid() = id);
+create or replace policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
+create or replace policy "Admins can view all profiles" on public.profiles for select using (
+  exists (select 1 from public.profiles where id = auth.uid() and primary_role in ('admin', 'super_admin'))
+);
+
+-- Streams: Publicly viewable
+create or replace policy "Streams are viewable by everyone" on public.streams for select using (true);
+
+-- Events: Viewable by everyone in branch
+create or replace policy "Events viewable by branch members" on public.events for select using (
+  branch_id = (select branch_id from public.profiles where id = auth.uid())
+  or exists (select 1 from public.profiles where id = auth.uid() and primary_role = 'super_admin')
+);
+
+-- Event Registrations: Own only
+create or replace policy "Users can manage own registrations" on public.event_registrations for all using (user_id = auth.uid());
+
+-- Attendance: Own only
+create or replace policy "Users can view own attendance" on public.attendance for select using (user_id = auth.uid());
+
+-- Notifications: Own only
+create or replace policy "Users can manage own notifications" on public.notifications for all using (user_id = auth.uid());
+
+-- Audit Logs: Super Admin only
+create or replace policy "Only super admins can view audit logs" on public.audit_logs for select using (
+  exists (select 1 from public.profiles where id = auth.uid() and primary_role = 'super_admin')
+);
+
+-- Member Transfers: Own or Admin
+create or replace policy "Users can view own transfers" on public.member_transfers for select using (
+  member_id = auth.uid() 
+  or requested_by = auth.uid()
+  or exists (select 1 from public.profiles where id = auth.uid() and primary_role in ('admin', 'super_admin'))
+);

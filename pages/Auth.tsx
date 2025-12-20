@@ -5,6 +5,8 @@ import { Button, Input, Card } from '../components/ui';
 import { AppRole, Branch } from '../types';
 import { Spinner } from '../components/ui';
 
+const ALLOW_PUBLIC_SIGNUP = false; // Set to true to enable self-registration
+
 export const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -285,12 +287,29 @@ export const Auth: React.FC = () => {
               Back to Sign In
             </button>
           ) : (
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline font-medium"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
+            <>
+              {isLogin ? (
+                ALLOW_PUBLIC_SIGNUP ? (
+                  <button
+                    onClick={() => setIsLogin(false)}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Don't have an account? Sign up
+                  </button>
+                ) : (
+                  <p className="text-gray-500 italic">
+                    New accounts are created by Branch Administrators.
+                  </p>
+                )
+              ) : (
+                <button
+                  onClick={() => setIsLogin(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Already have an account? Sign in
+                </button>
+              )}
+            </>
           )}
         </div>
       </Card>

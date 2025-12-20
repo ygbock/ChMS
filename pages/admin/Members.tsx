@@ -14,10 +14,20 @@ interface ImportRow {
 export const AdminMembers: React.FC = () => {
   const { profile } = useAuth();
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddingManually, setIsAddingManually] = useState(false);
+
+  // CSV Import State
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ImportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Manual Creation State
+  const [newMember, setNewMember] = useState({
+    email: '',
+    fullName: '',
+    password: 'ChangeMe123!' // Default password
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -101,24 +111,93 @@ export const AdminMembers: React.FC = () => {
     }
   };
 
+  const handleCreateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.branch_id) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('create_managed_user', {
+        _email: newMember.email,
+        _password: newMember.password,
+        _full_name: newMember.fullName,
+        _role: 'member',
+        _branch_id: profile.branch_id
+      });
+
+      if (error) throw error;
+
+      alert(`Successfully created account for ${newMember.fullName}. They can now login with their email and the password provided.`);
+      setIsAddingManually(false);
+      setNewMember({ email: '', fullName: '', password: 'ChangeMe123!' });
+    } catch (err: any) {
+      alert('Failed to create member account: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Members</h1>
-          <p className="text-gray-500">Manage directory and assignments.</p>
+          <p className="text-gray-500">Manage directory and provision accounts.</p>
         </div>
         <div className="flex gap-2">
-          {!isImporting ? (
-            <Button onClick={() => setIsImporting(true)} className="gap-2">
-              <Upload size={16} /> Import CSV
-            </Button>
+          {!isImporting && !isAddingManually ? (
+            <>
+              <Button variant="outline" onClick={() => setIsImporting(true)} className="gap-2">
+                <Upload size={16} /> Import CSV
+              </Button>
+              <Button onClick={() => setIsAddingManually(true)}>Add Manually</Button>
+            </>
           ) : (
-            <Button variant="secondary" onClick={() => setIsImporting(false)}>Cancel Import</Button>
+            <Button variant="secondary" onClick={() => { setIsImporting(false); setIsAddingManually(false); }}>Cancel</Button>
           )}
-          <Button>Add Manually</Button>
         </div>
       </div>
+
+      {isAddingManually && (
+        <Card title="Add New Member Account" className="max-w-xl mx-auto border-primary/20">
+          <form onSubmit={handleCreateMember} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                label="Full Name"
+                required
+                value={newMember.fullName}
+                onChange={e => setNewMember({ ...newMember, fullName: e.target.value })}
+                placeholder="e.g. John Smith"
+              />
+              <Input
+                label="Email Address"
+                type="email"
+                required
+                value={newMember.email}
+                onChange={e => setNewMember({ ...newMember, email: e.target.value })}
+                placeholder="john@example.com"
+              />
+              <div className="bg-slate-50 p-3 rounded rounded-md border text-sm text-slate-600">
+                <p className="font-semibold mb-1 flex items-center gap-2">
+                  <Check size={14} className="text-green-500" /> Default Password
+                </p>
+                <p>The account will be created with the password below. Please ask the member to change it after their first login.</p>
+                <Input
+                  type="text"
+                  className="mt-2 font-mono bg-white"
+                  value={newMember.password}
+                  onChange={e => setNewMember({ ...newMember, password: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 text-xs text-gray-500">
+              * Member will be assigned to <strong>{(profile as any)?.church_branches?.name || 'your current branch'}</strong>.
+            </div>
+            <Button className="w-full" disabled={loading}>
+              {loading ? <Spinner /> : 'Create Member Account'}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       {isImporting && (
         <Card title="Import Members from CSV" className="border-blue-200 shadow-md">
@@ -194,13 +273,15 @@ export const AdminMembers: React.FC = () => {
         </Card>
       )}
 
-      <Card>
-        <div className="p-12 text-center text-gray-500">
-          <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">Directory</h3>
-          <p>Member list will appear here.</p>
-        </div>
-      </Card>
+      {!isAddingManually && !isImporting && (
+        <Card>
+          <div className="p-12 text-center text-gray-500">
+            <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900">Directory</h3>
+            <p>Member list will appear here. Start by adding members manually or importing a CSV.</p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

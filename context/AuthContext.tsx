@@ -55,15 +55,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data) {
         setProfile(data as Profile);
       } else {
-        // Fallback for new users or if table is missing/corrupted
-        console.log('[AuthContext] Creating fallback profile for:', userId);
-        setProfile({
+        // --- SELF-HEALING LOGIC ---
+        // If we have a session but no profile row, create a fallback
+        const fallbackProfile: Profile = {
           id: userId,
           email: userEmail || '',
           full_name: metadata?.full_name || '',
           primary_role: (metadata?.primary_role as AppRole) || AppRole.MEMBER,
           branch_id: metadata?.branch_id || '',
-        } as Profile);
+        };
+
+        console.log('[AuthContext] Creating fallback profile for:', userId, fallbackProfile.primary_role);
+        setProfile(fallbackProfile);
+
+        // Attempt silent recovery: Insert the missing profile row
+        // We do this in the background to not block the UI
+        supabase.from('profiles').insert(fallbackProfile).then(({ error: insertErr }) => {
+          if (insertErr && insertErr.code !== '23505') { // Ignore duplicate key errors
+            console.warn('[AuthContext] Background profile sync failed:', insertErr.message);
+          } else {
+            console.log('[AuthContext] Successfully synced missing profile row.');
+          }
+        });
       }
     } catch (e: any) {
       console.error('[AuthContext] Unexpected error in fetchProfile:', e.message || e);
