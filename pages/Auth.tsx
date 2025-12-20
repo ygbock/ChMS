@@ -31,16 +31,29 @@ export const Auth: React.FC = () => {
 
   const loadBranches = async () => {
     setFetchingBranches(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('church_branches')
         .select('*')
         .order('name');
-      if (error) throw error;
-      setBranches(data || []);
-      if (data && data.length > 0) setSelectedBranchId(data[0].id);
-    } catch (err) {
+
+      if (fetchError) {
+        // Check for missing table error
+        if (fetchError.code === '42P01') {
+          console.warn('[Auth] church_branches table missing. Using demo branch.');
+          setBranches([{ id: '00000000-0000-0000-0000-000000000000', name: 'Demo Branch' } as Branch]);
+          setSelectedBranchId('00000000-0000-0000-0000-000000000000');
+        } else {
+          throw fetchError;
+        }
+      } else {
+        setBranches(data || []);
+        if (data && data.length > 0) setSelectedBranchId(data[0].id);
+      }
+    } catch (err: any) {
       console.error('Error fetching branches:', err);
+      setError('Could not load church branches. Please check your connection or database setup.');
     } finally {
       setFetchingBranches(false);
     }
@@ -100,8 +113,12 @@ export const Auth: React.FC = () => {
         if (error) throw error;
 
         if (data.session) {
-          // Auto login after signup - Redirect based on the role they chose
+          // Auto login after signup
+          // We use the selectedRole directly for the initial redirect since the profile 
+          // might still be being created by the database trigger
           const role = selectedRole;
+          console.log('[Auth] Signup successful, redirecting based on selected role:', role);
+
           if (role === AppRole.SUPER_ADMIN) {
             navigate('/superadmin');
           } else if (role === AppRole.ADMIN || role === AppRole.DISTRICT_ADMIN) {

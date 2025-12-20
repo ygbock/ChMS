@@ -45,7 +45,7 @@ export const AuditLogs: React.FC = () => {
     return matchesSearch && matchesAction;
   });
 
-  const uniqueActions = Array.from(new Set(logs.map(l => l.action)));
+  const uniqueActions = Array.from(new Set(logs.map(l => l.action))) as string[];
 
   if (loading) return <div className="flex justify-center p-20"><Spinner /></div>;
 
@@ -84,7 +84,7 @@ export const AuditLogs: React.FC = () => {
               onChange={(e) => setActionFilter(e.target.value)}
             >
               <option value="all">All Actions</option>
-              {uniqueActions.map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
+              {uniqueActions.map((a: string) => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
             </select>
           </div>
         </div>

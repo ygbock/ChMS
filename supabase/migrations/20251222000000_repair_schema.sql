@@ -1,11 +1,8 @@
--- ChMS Complete Database Schema
--- Last Updated: 2025-12-20
+-- Database Schema Reconstruction & Repair
+-- Created by Antigravity
 
--- EXTENSIONS
-create extension if not exists "uuid-ossp";
-
--- 1. CHURCH BRANCHES
-create table public.church_branches (
+-- 1. Create Church Branches Table
+create table if not exists public.church_branches (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   district_id text not null default 'default',
@@ -13,20 +10,20 @@ create table public.church_branches (
   created_at timestamp with time zone default now()
 );
 
--- 2. PROFILES
-create table public.profiles (
+-- 2. Create Profiles Table (Linked to Auth.Users)
+create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   full_name text,
   branch_id uuid references public.church_branches(id),
-  primary_role text not null default 'member',
+  primary_role text not null default 'member', -- member, admin, super_admin, etc
   avatar_url text,
   phone text,
   created_at timestamp with time zone default now()
 );
 
--- 3. STREAMS
-create table public.streams (
+-- 3. Create Streams Table
+create table if not exists public.streams (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text,
@@ -40,41 +37,8 @@ create table public.streams (
   created_at timestamp with time zone default now()
 );
 
--- 4. EVENTS
-create table public.events (
-  id uuid primary key default gen_random_uuid(),
-  branch_id uuid references public.church_branches(id),
-  title text not null,
-  description text,
-  event_date timestamp with time zone not null,
-  location text,
-  max_attendees integer,
-  created_at timestamp with time zone default now()
-);
-
--- 5. EVENT REGISTRATIONS
-create table public.event_registrations (
-  id uuid primary key default gen_random_uuid(),
-  event_id uuid references public.events(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  status text default 'registered',
-  created_at timestamp with time zone default now(),
-  unique(event_id, user_id)
-);
-
--- 6. ATTENDANCE
-create table public.attendance (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete cascade,
-  event_id uuid references public.events(id) on delete cascade,
-  check_in_time timestamp with time zone default now(),
-  branch_id uuid references public.church_branches(id),
-  notes text,
-  unique(user_id, event_id)
-);
-
--- 7. AUDIT LOGS
-create table public.audit_logs (
+-- 4. Create Audit Logs Table
+create table if not exists public.audit_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id),
   action text not null,
@@ -82,8 +46,8 @@ create table public.audit_logs (
   created_at timestamp with time zone default now()
 );
 
--- 8. NOTIFICATIONS
-create table public.notifications (
+-- 5. Create Notifications Table
+create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   title text not null,
@@ -93,21 +57,37 @@ create table public.notifications (
   created_at timestamp with time zone default now()
 );
 
--- 9. MEMBER TRANSFERS
-create table public.member_transfers (
+-- 6. Create Member Transfers Table
+create table if not exists public.member_transfers (
   id uuid primary key default gen_random_uuid(),
   member_id uuid references auth.users(id) on delete cascade,
   from_branch_id uuid references public.church_branches(id),
   to_branch_id uuid references public.church_branches(id),
   requested_by uuid references auth.users(id),
-  status text not null default 'pending',
+  status text not null default 'pending', -- pending, approved, rejected
   notes text,
   rejection_notes text,
   processed_by uuid references auth.users(id),
   created_at timestamp with time zone default now()
 );
 
--- TRIGGERS & FUNCTIONS
+-- RLS Enablement
+alter table public.church_branches enable row level security;
+alter table public.profiles enable row level security;
+alter table public.streams enable row level security;
+alter table public.audit_logs enable row level security;
+alter table public.notifications enable row level security;
+alter table public.member_transfers enable row level security;
+
+-- Basic RLS Policies (Base permissions)
+create policy "Public branches are viewable by everyone" on public.church_branches for select using (true);
+create policy "Users can view their own profile" on public.profiles for select using (auth.uid() = id);
+create policy "Users can update their own profile" on public.profiles for update using (auth.uid() = id);
+create policy "Admins can view all profiles" on public.profiles for select using (
+  (select primary_role from public.profiles where id = auth.uid()) in ('admin', 'super_admin')
+);
+
+-- 7. Trigger: Create profile on auth signup
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -127,13 +107,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- RLS
-alter table public.church_branches enable row level security;
-alter table public.profiles enable row level security;
-alter table public.streams enable row level security;
-alter table public.events enable row level security;
-alter table public.event_registrations enable row level security;
-alter table public.attendance enable row level security;
-alter table public.audit_logs enable row level security;
-alter table public.notifications enable row level security;
-alter table public.member_transfers enable row level security;
+-- 8. Seed Data: At least one branch
+insert into public.church_branches (name, address)
+values ('FaithConnect Headquarters', '123 Spirit Avenue, Downtown')
+on conflict do nothing;

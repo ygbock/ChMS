@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Simulating fetching profile
+  // Robust fetching of profile
   const fetchProfile = async (userId: string, userEmail?: string, metadata?: any) => {
     try {
       const { data, error } = await supabase
@@ -39,14 +39,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
-        console.error('Error fetching profile:', error.message);
+      if (error) {
+        // Log error only if it's not "not found" or "table missing" (which we handle as fallback)
+        if (error.code !== 'PGRST116' && error.code !== '42P01') {
+          console.error('[AuthContext] Error fetching profile:', error.message);
+        }
+
+        // PGRST116: No rows found
+        // 42P01: Table 'profiles' does not exist
+        if (error.code === '42P01') {
+          console.warn('[AuthContext] Profiles table missing. Using fallback profile.');
+        }
       }
 
       if (data) {
         setProfile(data as Profile);
       } else {
-        // Fallback for demo/new users: Use metadata if available
+        // Fallback for new users or if table is missing/corrupted
+        console.log('[AuthContext] Creating fallback profile for:', userId);
         setProfile({
           id: userId,
           email: userEmail || '',
@@ -56,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as Profile);
       }
     } catch (e: any) {
-      console.error('Unexpected error in fetchProfile:', e.message || e);
+      console.error('[AuthContext] Unexpected error in fetchProfile:', e.message || e);
     } finally {
       setLoading(false);
     }
