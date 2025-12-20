@@ -3,14 +3,16 @@ import { Card, Button, Badge, Spinner } from '../../components/ui';
 import { Users, DollarSign, Calendar, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '../../supabaseClient';
-import { Branch } from '../../types';
+import { Branch, MemberTransfer } from '../../types';
+import { Link } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [recentTransfers, setRecentTransfers] = useState<MemberTransfer[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
-  // Mock data - in a real app, this would be fetched based on selectedBranchId
   const initialStats = [
     { label: 'Total Members', value: 0, change: 0, trend: 'up', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
     { label: 'Pending Approvals', value: 0, change: 0, trend: 'up', icon: Filter, color: 'text-orange-600', bg: 'bg-orange-100' },
@@ -19,7 +21,6 @@ export const AdminDashboard: React.FC = () => {
 
   const [stats, setStats] = useState(initialStats);
 
-  // Fetch available branches
   useEffect(() => {
     const fetchBranches = async () => {
       const { data } = await supabase.from('church_branches').select('*');
@@ -28,26 +29,74 @@ export const AdminDashboard: React.FC = () => {
     fetchBranches();
   }, []);
 
-  // Filter logic
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       setLoading(true);
       try {
+        // 1. Stats Queries
         let memberQuery = supabase.from('members').select('*', { count: 'exact', head: true });
         let transferQuery = supabase.from('member_transfers').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        let attendanceQuery = supabase.from('attendance').select('id', { count: 'exact', head: true });
 
         if (selectedBranchId !== 'all') {
           memberQuery = memberQuery.eq('branch_id', selectedBranchId);
           transferQuery = transferQuery.eq('to_branch_id', selectedBranchId);
+          attendanceQuery = attendanceQuery.eq('branch_id', selectedBranchId);
         }
 
-        const [memberRes, transferRes] = await Promise.all([memberQuery, transferQuery]);
+        const [memberRes, transferRes, attendanceRes] = await Promise.all([
+          memberQuery,
+          transferQuery,
+          attendanceQuery
+        ]);
 
         setStats(prev => prev.map(s => {
           if (s.label === 'Total Members') return { ...s, value: memberRes.count || 0 };
           if (s.label === 'Pending Approvals') return { ...s, value: transferRes.count || 0 };
+          if (s.label === 'Avg Attendance') return { ...s, value: attendanceRes.count || 0 };
           return s;
         }));
+
+        // 2. Recent Transfers
+        let rtQuery = supabase
+          .from('member_transfers')
+          .select('*, church_branches_from:from_branch_id(name)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (selectedBranchId !== 'all') {
+          rtQuery = rtQuery.eq('to_branch_id', selectedBranchId);
+        }
+        const { data: rtData } = await rtQuery;
+        setRecentTransfers(rtData || []);
+
+        // 3. Attendance Trends (Simulated aggregation based on real check-ins)
+        // In a real high-scale app, you'd use a view or a metric table.
+        // For now, we'll fetch last 7 days check-ins and group them.
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        let atTrendQuery = supabase
+          .from('attendance')
+          .select('check_in_time')
+          .gte('check_in_time', sevenDaysAgo.toISOString());
+
+        if (selectedBranchId !== 'all') {
+          atTrendQuery = atTrendQuery.eq('branch_id', selectedBranchId);
+        }
+        const { data: atData } = await atTrendQuery;
+
+        // Group by day
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const grouped = days.map(d => ({ name: d, attendance: 0 }));
+        atData?.forEach(row => {
+          const dayName = new Date(row.check_in_time).toLocaleDateString(undefined, { weekday: 'short' });
+          const dayObj = grouped.find(g => g.name === dayName);
+          if (dayObj) dayObj.attendance++;
+        });
+        setAttendanceData(grouped);
+
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
       } finally {
@@ -55,18 +104,8 @@ export const AdminDashboard: React.FC = () => {
       }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, [selectedBranchId]);
-
-  const data = [
-    { name: 'Mon', attendance: Math.floor(40 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Tue', attendance: Math.floor(30 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Wed', attendance: Math.floor(200 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Thu', attendance: Math.floor(27 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Fri', attendance: Math.floor(18 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Sat', attendance: Math.floor(23 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-    { name: 'Sun', attendance: Math.floor(340 * (selectedBranchId === 'all' ? 1 : 0.6)) },
-  ];
 
   return (
     <div className="space-y-8">
@@ -92,7 +131,9 @@ export const AdminDashboard: React.FC = () => {
             </select>
           </div>
           <Button variant="secondary">Export Report</Button>
-          <Button>Add Member</Button>
+          <Link to="/admin/members">
+            <Button>Manage Members</Button>
+          </Link>
         </div>
       </div>
 
@@ -117,22 +158,18 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-sm">
-                  {stat.change > 0 ? (
-                    <span className="text-green-600 flex items-center font-medium"><ArrowUpRight size={16} /> +{stat.change}%</span>
-                  ) : (
-                    <span className="text-red-600 flex items-center font-medium"><ArrowDownRight size={16} /> {stat.change}%</span>
-                  )}
-                  <span className="text-gray-500">vs last month</span>
+                  <span className="text-blue-600 font-medium font-mono text-xs">Live Statistics</span>
+                  <span className="text-gray-400">• Just updated</span>
                 </div>
               </Card>
             ))}
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            <Card title="Attendance Trends" className="lg:col-span-2">
+            <Card title="Attendance Trends (Last 7 Days)" className="lg:col-span-2">
               <div className="h-[300px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data}>
+                  <BarChart data={attendanceData}>
                     <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                     <Tooltip
@@ -145,18 +182,23 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </Card>
 
-            <Card title="Pending Approvals">
+            <Card title="Approval Requests">
               <div className="space-y-4 mt-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="font-semibold text-sm">Member Transfer</p>
-                      <p className="text-xs text-gray-500">John Smith to North District</p>
+                {recentTransfers.map((req) => (
+                  <div key={req.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">Transfer Request</p>
+                      <p className="text-xs text-gray-500 truncate">From: {(req as any).church_branches_from?.name || 'Unknown'}</p>
                     </div>
                     <Badge variant="warning">Pending</Badge>
                   </div>
                 ))}
-                <Button variant="ghost" className="w-full text-sm text-gray-500">View All</Button>
+                {recentTransfers.length === 0 && (
+                  <p className="text-center text-gray-400 text-sm py-10">No pending requests.</p>
+                )}
+                <Link to="/admin/transfers">
+                  <Button variant="ghost" size="sm" className="w-full text-blue-600">Go to Queue</Button>
+                </Link>
               </div>
             </Card>
           </div>

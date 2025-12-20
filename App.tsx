@@ -26,6 +26,9 @@ import { AdminMembers } from './pages/admin/Members';
 import { StreamingControl } from './pages/admin/StreamingControl';
 
 // Super Admin Pages
+import { SuperAdminDashboard } from './pages/superadmin/Dashboard';
+import { SuperAdminBranches } from './pages/superadmin/Branches';
+import { SuperAdminUsers } from './pages/superadmin/Users';
 import { AuditLogs } from './pages/superadmin/AuditLog';
 
 const App: React.FC = () => {
@@ -71,8 +74,10 @@ const App: React.FC = () => {
 
           {/* Super Admin Routes */}
           <Route path="/superadmin" element={<ProtectedRoute role="superadmin" />}>
-            <Route index element={<div className="p-8">Super Admin Overview</div>} />
-            <Route path="audit-logs" element={<div className="p-8"><AuditLogs /></div>} />
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="branches" element={<div className="p-8"><SuperAdminBranches /></div>} />
+            <Route path="users" element={<div className="p-8"><SuperAdminUsers /></div>} />
+            <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
 
           {/* Fallback */}
