@@ -10,18 +10,14 @@ import { TransferRequestForm } from './components/TransferRequestForm';
 import { PortalDashboard } from './pages/portal/Dashboard';
 import { PortalStreaming } from './pages/portal/Streaming';
 import { TransferHistory } from './pages/portal/TransferHistory';
-import { 
-  PortalDirectory, 
-  PortalRegistrations, 
-  PortalAttendance, 
-  PortalGroups, 
-  PortalNotifications, 
-  PortalSettings, 
-  PortalShare, 
-  PortalDepartments,
-  PortalProfile,
-  PortalCalendar
-} from './pages/portal/Placeholders';
+import { PortalProfile } from './pages/portal/Profile';
+import { PortalDirectory } from './pages/portal/Directory';
+import { PortalAttendance } from './pages/portal/Attendance';
+import { PortalRegistrations } from './pages/portal/Registrations';
+import { PortalGroups } from './pages/portal/Groups';
+import { PortalDepartments } from './pages/portal/Departments';
+import { PortalNotifications } from './pages/portal/Notifications';
+import { PortalSettings, PortalShare, PortalCalendar } from './pages/portal/Placeholders';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/Dashboard';
@@ -56,7 +52,7 @@ const App: React.FC = () => {
             <Route path="departments" element={<PortalDepartments />} />
             <Route path="streaming" element={<PortalStreaming />} />
             <Route path="streaming/:streamId" element={<PortalStreaming />} />
-            
+
             {/* Existing functionality retained */}
             <Route path="transfer-request" element={<div className="p-8 max-w-2xl"><TransferRequestForm /></div>} />
             <Route path="transfers" element={<div className="p-8"><TransferHistory /></div>} />
