@@ -10,14 +10,18 @@ import { TransferRequestForm } from './components/TransferRequestForm';
 import { PortalDashboard } from './pages/portal/Dashboard';
 import { PortalStreaming } from './pages/portal/Streaming';
 import { TransferHistory } from './pages/portal/TransferHistory';
-import { PortalProfile } from './pages/portal/Profile';
-import { PortalDirectory } from './pages/portal/Directory';
-import { PortalAttendance } from './pages/portal/Attendance';
-import { PortalRegistrations } from './pages/portal/Registrations';
-import { PortalGroups } from './pages/portal/Groups';
-import { PortalDepartments } from './pages/portal/Departments';
-import { PortalNotifications } from './pages/portal/Notifications';
-import { PortalSettings, PortalShare, PortalCalendar } from './pages/portal/Placeholders';
+import { 
+  PortalDirectory, 
+  PortalRegistrations, 
+  PortalAttendance, 
+  PortalGroups, 
+  PortalNotifications, 
+  PortalSettings, 
+  PortalShare, 
+  PortalDepartments,
+  PortalProfile,
+  PortalCalendar
+} from './pages/portal/Placeholders';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/Dashboard';
@@ -26,9 +30,6 @@ import { AdminMembers } from './pages/admin/Members';
 import { StreamingControl } from './pages/admin/StreamingControl';
 
 // Super Admin Pages
-import { SuperAdminDashboard } from './pages/superadmin/Dashboard';
-import { SuperAdminBranches } from './pages/superadmin/Branches';
-import { SuperAdminUsers } from './pages/superadmin/Users';
 import { AuditLogs } from './pages/superadmin/AuditLog';
 
 const App: React.FC = () => {
@@ -55,7 +56,7 @@ const App: React.FC = () => {
             <Route path="departments" element={<PortalDepartments />} />
             <Route path="streaming" element={<PortalStreaming />} />
             <Route path="streaming/:streamId" element={<PortalStreaming />} />
-
+            
             {/* Existing functionality retained */}
             <Route path="transfer-request" element={<div className="p-8 max-w-2xl"><TransferRequestForm /></div>} />
             <Route path="transfers" element={<div className="p-8"><TransferHistory /></div>} />
@@ -73,11 +74,9 @@ const App: React.FC = () => {
           </Route>
 
           {/* Super Admin Routes */}
-          <Route path="/superadmin" element={<ProtectedRoute role="superadmin" />}>
-            <Route index element={<SuperAdminDashboard />} />
-            <Route path="branches" element={<div className="p-8"><SuperAdminBranches /></div>} />
-            <Route path="users" element={<div className="p-8"><SuperAdminUsers /></div>} />
-            <Route path="audit-logs" element={<AuditLogs />} />
+          <Route path="/superadmin" element={<ProtectedRoute role="admin" />}>
+             <Route index element={<div className="p-8">Super Admin Overview</div>} />
+             <Route path="audit-logs" element={<div className="p-8"><AuditLogs /></div>} />
           </Route>
 
           {/* Fallback */}

@@ -10,7 +10,6 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,8 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isSuperAdmin: false,
-  signOut: async () => { },
-  refreshProfile: async () => { },
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -30,80 +28,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Robust fetching of profile
-  const fetchProfile = async (userId: string, userEmail?: string, metadata?: any) => {
+  const fetchProfile = async (userId: string, userEmail?: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-
+      
       if (error) {
-        // Log error only if it's not "not found" or "table missing" (which we handle as fallback)
+        // Log error only if it's not a common expected error (like table missing or row missing)
+        // 42P01: Table doesn't exist, PGRST116: Row not found
         if (error.code !== 'PGRST116' && error.code !== '42P01') {
-          console.error('[AuthContext] Error fetching profile:', error.message);
+          console.warn('Profile fetch handled:', error.message);
         }
-
-        // PGRST116: No rows found
-        // 42P01: Table 'profiles' does not exist
-        if (error.code === '42P01') {
-          console.warn('[AuthContext] Profiles table missing. Using fallback profile.');
-        }
-      }
-
-      if (data) {
-        setProfile(data as Profile);
-      } else {
-        // --- SELF-HEALING LOGIC ---
-        // If we have a session but no profile row, create a fallback
-        const fallbackProfile: Profile = {
+        
+        // Fallback for demo/new users without profile trigger or table setup
+        setProfile({
           id: userId,
           email: userEmail || '',
-          full_name: metadata?.full_name || '',
-          primary_role: (metadata?.primary_role as AppRole) || AppRole.MEMBER,
-          branch_id: metadata?.branch_id || '',
-        };
-
-        console.log('[AuthContext] Creating fallback profile for:', userId, fallbackProfile.primary_role);
-        setProfile(fallbackProfile);
-
-        // Attempt silent recovery: Insert the missing profile row
-        // We do this in the background to not block the UI
-        supabase.from('profiles').insert(fallbackProfile).then(({ error: insertErr }) => {
-          if (insertErr && insertErr.code !== '23505') { // Ignore duplicate key errors
-            console.warn('[AuthContext] Background profile sync failed:', insertErr.message);
-          } else {
-            console.log('[AuthContext] Successfully synced missing profile row.');
-          }
+          primary_role: AppRole.MEMBER,
+        });
+      } else if (data) {
+        setProfile(data as Profile);
+      } else {
+        setProfile({
+          id: userId,
+          email: userEmail || '',
+          primary_role: AppRole.MEMBER,
         });
       }
     } catch (e: any) {
-      console.error('[AuthContext] Unexpected error in fetchProfile:', e.message || e);
+      // Catch network errors like "TypeError: Failed to fetch"
+      console.error('Network or unexpected error fetching profile:', e.message || e);
+      setProfile({
+        id: userId,
+        email: userEmail || '',
+        primary_role: AppRole.MEMBER,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshProfile = async () => {
-    if (session?.user) {
-      await fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
-    }
-  };
-
   useEffect(() => {
+    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
-      else setLoading(false);
+      if (session) {
+        fetchProfile(session.user.id, session.user.email);
+      } else {
+        setLoading(false);
+      }
+    }).catch(err => {
+      console.error("Auth session error:", err);
+      setLoading(false);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
-      else {
+      if (session) {
+        setLoading(true);
+        fetchProfile(session.user.id, session.user.email);
+      } else {
         setProfile(null);
         setLoading(false);
       }
@@ -111,10 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (profile) setLoading(false);
-  }, [profile]);
 
   const value = {
     session,
@@ -127,7 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setSession(null);
     },
-    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
