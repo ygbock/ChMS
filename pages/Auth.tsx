@@ -1,12 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Button, Input, Card } from '../components/ui';
-import { AppRole } from '../types';
+import { Profile, AppRole, Branch } from '../types';
+import { Spinner } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+
+const ALLOW_PUBLIC_SIGNUP = false; // Set to true to enable self-registration
 
 export const Auth: React.FC = () => {
+  const { session, profile } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (session && profile) {
+      if (profile.primary_role === AppRole.SUPER_ADMIN) {
+        navigate('/superadmin');
+      } else if (profile.primary_role === AppRole.ADMIN || profile.primary_role === AppRole.DISTRICT_ADMIN) {
+        navigate('/admin');
+      } else {
+        navigate('/portal');
+      }
+    }
+  }, [session, profile, navigate]);
   const [isLogin, setIsLogin] = useState(!searchParams.get('mode'));
   
   // Form State

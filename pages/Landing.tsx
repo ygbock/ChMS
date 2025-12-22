@@ -1,9 +1,26 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { LayoutDashboard, Shield, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { AppRole } from '../types';
 
 export const Landing: React.FC = () => {
+  const { session, profile } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (session && profile) {
+      if (profile.primary_role === AppRole.SUPER_ADMIN) {
+        navigate('/superadmin');
+      } else if (profile.primary_role === AppRole.ADMIN || profile.primary_role === AppRole.DISTRICT_ADMIN) {
+        navigate('/admin');
+      } else {
+        navigate('/portal');
+      }
+    }
+  }, [session, profile, navigate]);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
